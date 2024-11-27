@@ -26,6 +26,7 @@ namespace App20241126
 
             try
             {
+                
                 int Height = this.pictureBox1.Image.Height;
                 int Width = this.pictureBox1.Image.Width;
                 Bitmap newBitmap = new Bitmap(Width, Height);
@@ -48,41 +49,64 @@ namespace App20241126
             {
                 MessageBox.Show(ex.Message, "訊息顯示");
             }
+        
         }
+
 
         private void button2_Click(object sender, EventArgs e)
         {
             try
             {
-                // 設定亮度門檻
-                int threshold = 128; // 可以根據需要修改此值
-
-                int Height = this.pictureBox1.Image.Height;
-                int Width = this.pictureBox1.Image.Width;
-                Bitmap newBitmap = new Bitmap(Width, Height);
                 Bitmap oldBitmap = (Bitmap)this.pictureBox1.Image;
-                Color pixel;
+                int Width = oldBitmap.Width;
+                int Height = oldBitmap.Height;
 
-                for (int x = 0; x < Width; x++)
+                Bitmap edgeBitmap = new Bitmap(Width, Height);
+
+                // 定義 Sobel 運算元
+                int[,] gx = new int[,] {
+            { -1, 0, 1 },
+            { -2, 0, 2 },
+            { -1, 0, 1 }
+        };
+                int[,] gy = new int[,] {
+            { -1, -2, -1 },
+            { 0,  0,  0 },
+            { 1,  2,  1 }
+        };
+
+                // Sobel 邊緣檢測
+                for (int x = 1; x < Width - 1; x++)
                 {
-                    for (int y = 0; y < Height; y++)
+                    for (int y = 1; y < Height - 1; y++)
                     {
-                        pixel = oldBitmap.GetPixel(x, y);
-                        // 將 pixel 轉換為灰階
-                        int grayValue = (int)((299 * pixel.R + 587 * pixel.G + 114 * pixel.B) / 1000);
+                        int gradX = 0;
+                        int gradY = 0;
 
-                        // 根據門檻設定二值化像素值
-                        if (grayValue >= threshold)
+                        // 對 3x3 區域進行運算
+                        for (int i = -1; i <= 1; i++)
                         {
-                            newBitmap.SetPixel(x, y, Color.FromArgb(255, 255, 255)); // 設定為白色
+                            for (int j = -1; j <= 1; j++)
+                            {
+                                Color pixel = oldBitmap.GetPixel(x + i, y + j);
+                                int grayValue = (pixel.R + pixel.G + pixel.B) / 3; // 轉為灰階
+                                gradX += grayValue * gx[i + 1, j + 1];
+                                gradY += grayValue * gy[i + 1, j + 1];
+                            }
                         }
-                        else
-                        {
-                            newBitmap.SetPixel(x, y, Color.FromArgb(0, 0, 0)); // 設定為黑色
-                        }
+
+                        // 計算梯度大小
+                        int edgeValue = (int)Math.Sqrt(gradX * gradX + gradY * gradY);
+
+                        // 將結果限制在 0-255
+                        edgeValue = Math.Min(255, Math.Max(0, edgeValue));
+
+                        // 邊緣為白色，非邊緣為黑色
+                        edgeBitmap.SetPixel(x, y, Color.FromArgb(edgeValue, edgeValue, edgeValue));
                     }
                 }
-                this.pictureBox2.Image = newBitmap;
+
+                this.pictureBox2.Image = edgeBitmap; // 顯示結果
             }
             catch (Exception ex)
             {
@@ -147,7 +171,7 @@ namespace App20241126
                         }
                 int AngleNum = 360;
                 int DistNum = (int)Math.Sqrt(Width * Width + Height * Height) * 2;
-                int Threshold = Math.Min(Width, Height) / 5;
+                int Threshold = Math.Min(Width, Height) / 4;
                 int HoughSpaceMax = 0;
                 Bitmap newBitmap = new Bitmap(AngleNum, DistNum);
                 int pixH;
